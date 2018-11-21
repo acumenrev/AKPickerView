@@ -182,9 +182,10 @@
 	[self invalidateIntrinsicContentSize];
 	[self.collectionView.collectionViewLayout invalidateLayout];
 	[self.collectionView reloadData];
+    /* TRI: crash when previousSelectedIndex > current number of items
 	if ([self.dataSource numberOfItemsInPickerView:self]) {
-		[self selectItem:self.selectedItem animated:NO notifySelection:NO];
-	}
+        [self selectItem:self.selectedItem animated:NO notifySelection:NO];
+	}*/
 }
 
 - (CGFloat)offsetForItem:(NSUInteger)item
@@ -238,8 +239,23 @@
 									  animated:animated
 								scrollPosition:UICollectionViewScrollPositionNone];
 	[self scrollToItem:item animated:animated];
-
+    
+    NSUInteger oldIndex = self.selectedItem;
+    
 	self.selectedItem = item;
+    
+    if (self.useAlterativeValue == true) {
+        // update old index
+        AKCollectionViewCell *cell = (AKCollectionViewCell *)[self.collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForItem:oldIndex inSection:0]];
+        cell.label.text = self.alternativeValue;
+        
+        // update new index
+        if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
+            NSString *title = [self.dataSource pickerView:self titleForItem:item];
+            AKCollectionViewCell *cell = (AKCollectionViewCell *)[self.collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForItem:self.selectedItem inSection:0]];
+            cell.label.text = title;
+        }
+    }
 
 	if (notifySelection &&
 		[self.delegate respondsToSelector:@selector(pickerView:didSelectItem:)])
@@ -291,7 +307,15 @@
 
 	if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
 		NSString *title = [self.dataSource pickerView:self titleForItem:indexPath.item];
-		cell.label.text = title;
+        if (self.useAlterativeValue == true) {
+            if (indexPath.item == self.selectedItem) {
+                cell.label.text = title;
+            } else {
+                cell.label.text = self.alternativeValue;
+            }
+        } else {
+            cell.label.text = title;
+        }
 		cell.label.textColor = self.textColor;
 		cell.label.highlightedTextColor = self.highlightedTextColor;
 		cell.label.font = self.font;
@@ -318,7 +342,18 @@
 	CGSize size = CGSizeMake(self.interitemSpacing, collectionView.bounds.size.height);
 	if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
 		NSString *title = [self.dataSource pickerView:self titleForItem:indexPath.item];
-		size.width += [self sizeForString:title].width;
+        
+        if (self.useAlterativeValue == true) {
+            if (self.selectedItem != indexPath.item) {
+                size.width += 50.0;
+            } else {
+                size.width += [self sizeForString:title].width;
+            }
+        } else {
+            size.width += [self sizeForString:title].width;
+        }
+        
+		
 		if ([self.delegate respondsToSelector:@selector(pickerView:marginForItem:)]) {
 			CGSize margin = [self.delegate pickerView:self marginForItem:indexPath.item];
 			size.width += margin.width * 2;
