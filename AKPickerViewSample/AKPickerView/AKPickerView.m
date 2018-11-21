@@ -121,6 +121,7 @@
 {
 	if (![_delegate isEqual:delegate]) {
 		_delegate = delegate;
+        
 		self.intercepter.delegate = delegate;
 	}
 }
@@ -235,6 +236,9 @@
 
 - (void)selectItem:(NSUInteger)item animated:(BOOL)animated notifySelection:(BOOL)notifySelection
 {
+    if (self.selectedItem == item) {
+        return;
+    }
 	[self.collectionView selectItemAtIndexPath:[NSIndexPath indexPathForItem:item inSection:0]
 									  animated:animated
 								scrollPosition:UICollectionViewScrollPositionNone];
@@ -253,7 +257,15 @@
         if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
             NSString *title = [self.dataSource pickerView:self titleForItem:item];
             AKCollectionViewCell *cell = (AKCollectionViewCell *)[self.collectionView cellForItemAtIndexPath:[NSIndexPath indexPathForItem:self.selectedItem inSection:0]];
-            cell.label.text = title;
+
+
+            if (self.applyTransparentOnSelectedValue) {
+                cell.label.text = title;
+                [self transformCell:cell];
+            } else {
+                cell.label.text = title;
+            }
+
         }
     }
 
@@ -288,6 +300,49 @@
 	}
 }
 
+- (void)reloadSection:(NSUInteger)section {
+    __weak AKPickerView *weakSelf = self;
+
+    [UIView performWithoutAnimation:^{
+        [_collectionView reloadSections:[NSIndexSet indexSetWithIndex:section]];
+    }];
+
+}
+
+- (void)reloadItem:(NSUInteger)item {
+    if ([self.dataSource numberOfItemsInPickerView:self] > item) {
+        [_collectionView reloadItemsAtIndexPaths:[NSIndexPath indexPathForItem:item inSection:0]];
+    }
+}
+
+- (void)reloadItems:(NSArray *)items {
+    
+}
+
+- (NSArray *)visibleItems {
+    NSMutableArray *arr = [NSMutableArray array];
+    NSNumber *temp;
+    for (int i = 0; i < [_collectionView indexPathsForVisibleItems].count; i++) {
+        NSIndexPath *idx = [[_collectionView indexPathsForVisibleItems] objectAtIndex:i];
+        temp = [NSNumber numberWithInteger:idx.item];
+        if (temp != nil) {
+            [arr addObject:temp];
+        }
+    }
+
+    return arr;
+}
+
+- (void) transformCell: (UICollectionViewCell *) cell{
+    cell.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
+
+    [UIView animateWithDuration:0.2f animations:^{
+        cell.transform = CGAffineTransformMakeScale(1.0f, 1.0f);
+    } completion:^(BOOL finished) {
+
+    }];
+}
+
 #pragma mark -
 
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView
@@ -307,6 +362,11 @@
 
 	if ([self.dataSource respondsToSelector:@selector(pickerView:titleForItem:)]) {
 		NSString *title = [self.dataSource pickerView:self titleForItem:indexPath.item];
+        cell.label.textColor = self.textColor;
+        cell.label.highlightedTextColor = self.highlightedTextColor;
+        cell.label.font = self.font;
+        cell.font = self.font;
+        cell.highlightedFont = self.highlightedFont;
         if (self.useAlterativeValue == true) {
             if (indexPath.item == self.selectedItem) {
                 cell.label.text = title;
@@ -316,11 +376,7 @@
         } else {
             cell.label.text = title;
         }
-		cell.label.textColor = self.textColor;
-		cell.label.highlightedTextColor = self.highlightedTextColor;
-		cell.label.font = self.font;
-		cell.font = self.font;
-		cell.highlightedFont = self.highlightedFont;
+
 		cell.label.bounds = (CGRect){CGPointZero, [self sizeForString:title]};
 		if ([self.delegate respondsToSelector:@selector(pickerView:marginForItem:)]) {
 			CGSize margin = [self.delegate pickerView:self marginForItem:indexPath.item];
@@ -352,8 +408,7 @@
         } else {
             size.width += [self sizeForString:title].width;
         }
-        
-		
+
 		if ([self.delegate respondsToSelector:@selector(pickerView:marginForItem:)]) {
 			CGSize margin = [self.delegate pickerView:self marginForItem:indexPath.item];
 			size.width += margin.width * 2;
@@ -364,6 +419,8 @@
 	}
 	return size;
 }
+
+
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
 {
@@ -420,6 +477,26 @@
 	self.collectionView.layer.mask.frame = self.collectionView.bounds;
 	[CATransaction commit];
 }
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView {
+    if ([self.delegate respondsToSelector:@selector(scrollViewWillBeginDragging:)]) {
+        [self.delegate scrollViewWillBeginDragging:scrollView];
+    }
+}
+
+- (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView {
+    if ([self.delegate respondsToSelector:@selector(scrollViewWillBeginDecelerating:)]) {
+        [self.delegate scrollViewWillBeginDecelerating:scrollView];
+    }
+}
+
+- (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView {
+    if ([self.delegate respondsToSelector:@selector(scrollViewDidEndScrollingAnimation:)]) {
+        [self.delegate scrollViewDidEndScrollingAnimation:scrollView];
+    }
+}
+
+
 
 #pragma mark -
 

@@ -46,9 +46,13 @@ typedef NS_ENUM(NSInteger, AKPickerViewStyle) {
 @property(nonatomic, assign) AKPickerViewStyle pickerViewStyle;
 @property(nonatomic, assign, readonly) NSUInteger selectedItem;
 @property(nonatomic, assign, readonly) CGPoint contentOffset;
+@property(nonatomic, assign) BOOL applyTransparentOnSelectedValue;
 
 - (void)reloadData;
 - (void)scrollToItem:(NSUInteger)item animated:(BOOL)animated;
 - (void)selectItem:(NSUInteger)item animated:(BOOL)animated;
-
+- (void)reloadSection:(NSUInteger)section;
+- (void)reloadItem:(NSUInteger)item;
+- (NSArray *)visibleItems;
+- (void)reloadItems:(NSArray *)items;
 @end
